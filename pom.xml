@@ -49,7 +49,10 @@
                     <archive>
                         <manifestEntries>
                             <!-- add okhttp3 to the manifest to that the classloader finds it -->
-                            <Dependencies>com.squareup.okhttp3</Dependencies>
+                            <Dependencies>
+                                <Dependency>com.squareup.okhttp3</Dependency>
+                                <Dependency>org.jetbrains.kotlin</Dependency>
+                            </Dependencies>
                         </manifestEntries>
                     </archive>
                 </configuration>
@@ -68,6 +71,7 @@
                             <artifactSet>
                                 <includes>
                                     <include>org.privacyidea:privacyidea-java-client</include>
+                                    <include>org.jetbrains.kotlin</include>
                                 </includes>
                             </artifactSet>
                         </configuration>
@@ -75,6 +79,26 @@
                 </executions>
             </plugin>
 
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -142,5 +166,13 @@
             <artifactId>okhttp</artifactId>
             <version>4.9.1</version>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-stdlib -->
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib</artifactId>
+            <version>1.9.0</version>
+        </dependency>
+
     </dependencies>
 </project>
