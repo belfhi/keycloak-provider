@@ -16,6 +16,15 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       - name: build java-client
-        run: cd java-client && mvn --batch-mode clean install
+        run: |
+          cd java-client 
+          mvn --batch-mode clean install
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots clean install
+      - name: copy jars
+        run: mkdir compiled && cp target/*.jar compiled/
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: compiled-jars
+          path: compiled
