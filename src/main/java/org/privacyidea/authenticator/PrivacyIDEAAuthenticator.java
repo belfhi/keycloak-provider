@@ -74,7 +74,6 @@ import static org.privacyidea.authenticator.Const.MSG_USER_NOT_FOUND;
 import static org.privacyidea.authenticator.Const.NOTE_COUNTER;
 import static org.privacyidea.authenticator.Const.NOTE_ENTRAID_FLOW;
 import static org.privacyidea.authenticator.Const.NOTE_OTP_TRANSACTION_ID;
-import static org.privacyidea.authenticator.Const.NOTE_PASSKEY_REGISTRATION_SERIAL;
 import static org.privacyidea.authenticator.Const.NOTE_PASSKEY_TRANSACTION_ID;
 import static org.privacyidea.authenticator.Const.NOTE_PUSH_TRANSACTION_ID;
 import static org.privacyidea.authenticator.Const.NOTE_WEBAUTHN_TRANSACTION_ID;
@@ -493,8 +492,8 @@ public class PrivacyIDEAAuthenticator implements org.keycloak.authentication.Aut
             {
                 String passkeyTransactionID = authenticationSession.getAuthNote(NOTE_PASSKEY_TRANSACTION_ID);
 
-                response = privacyIDEA.validateCheckPasskey(passkeyTransactionID, piFormResult.passkeySignResponse, piFormResult.origin,
-                                                            headers);
+                response = privacyIDEA.checkUserlessWebAuthn(passkeyTransactionID, piFormResult.webAuthnSignResponse,
+                                                             piFormResult.origin, headers);
                 if (response != null)
                 {
                     if (response.authenticationSuccessful())
@@ -570,9 +569,9 @@ public class PrivacyIDEAAuthenticator implements org.keycloak.authentication.Aut
             String transactionId = authenticationSession.getAuthNote(NOTE_PASSKEY_TRANSACTION_ID);
 
             PIResponse passkeyResponse = privacyIDEA.validateCheckCompletePasskeyRegistration(transactionId, serial,
-                                                                                              context.getUser().getUsername(),
-                                                                                              piFormResult.passkeyRegistrationResponse,
-                                                                                              piFormResult.origin, headers);
+                    context.getUser().getUsername(),
+                    piFormResult.passkeyRegistrationResponse,
+                    piFormResult.origin, headers);
             if (passkeyResponse != null && passkeyResponse.value)
             {
                 context.success();
