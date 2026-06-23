@@ -206,8 +206,9 @@
                     startPollingInBrowser("${authenticationForm.pollInBrowserURL}", "${authenticationForm.transactionId}", "${url.resourcesPath}");
                 </script>
             </#if>
-            <!-- WEBAUTHN -->
-            <#if authenticationForm.mode = "webauthn" && authenticationForm.webAuthnSignRequest?has_content>
+            <!-- WEBAUTHN (2nd factor) and usernameless passkey (eduMFA) both use the WebAuthn ceremony. -->
+            <#if authenticationForm.webAuthnSignRequest?has_content
+            && (authenticationForm.mode = "webauthn" || (authenticationForm.mode = "passkey" && !authenticationForm.errorMessage?has_content))>
                 <script>
                     webAuthnAuthentication('${authenticationForm.webAuthnSignRequest}', '${authenticationForm.mode}');
                 </script>
