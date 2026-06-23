@@ -100,8 +100,10 @@ var pi_webauthn = navigator.credentials ? window.pi_webauthn || {} : null;
                 };
 
                 if (assertion.response.userHandle) {
+                    // userHandle is an ArrayBuffer, utf8ArrToStr needs an indexable byte array.
+                    // (eduMFA usernameless/passkey login relies on this, the 2nd-factor flow never returns a userHandle.)
                     webAuthnSignResponse.userhandle = utf8ArrToStr(
-                        assertion.response.userHandle);
+                        new Uint8Array(assertion.response.userHandle));
                 }
                 if (assertion.response.assertionClientExtensions) {
                     webAuthnSignResponse.assertionclientextensions = webAuthnBase64EncArr(
