@@ -480,9 +480,13 @@ public class PrivacyIDEAAuthenticator implements org.keycloak.authentication.Aut
         boolean didTrigger = false;
         PIResponse response = null;
 
-        // Passkey: Will return the username and end the authentication on success. This is different from the WebAuthn authentication
-        // Which is attempted later.
-        if (StringUtil.isNotBlank(piFormResult.passkeySignResponse))
+        // Usernameless WebAuthn (passkey as the only factor) with eduMFA. The WebAuthn browser JS returns a
+        // webAuthnSignResponse with the userHandle. eduMFA resolves the user from it and returns the username,
+        // ending authentication on success. This is distinguished from 2nd-factor WebAuthn (attempted later, with a
+        // user already present) by the passkey transaction id note, which is only set when a usernameless challenge
+        // was triggered.
+        String passkeyTransactionID = authenticationSession.getAuthNote(NOTE_PASSKEY_TRANSACTION_ID);
+        if (StringUtil.isNotBlank(piFormResult.webAuthnSignResponse) && StringUtil.isNotBlank(passkeyTransactionID))
         {
             if (StringUtil.isBlank(piFormResult.origin))
             {
@@ -490,8 +494,6 @@ public class PrivacyIDEAAuthenticator implements org.keycloak.authentication.Aut
             }
             else
             {
-                String passkeyTransactionID = authenticationSession.getAuthNote(NOTE_PASSKEY_TRANSACTION_ID);
-
                 response = privacyIDEA.checkUserlessWebAuthn(passkeyTransactionID, piFormResult.webAuthnSignResponse,
                                                              piFormResult.origin, headers);
                 if (response != null)
@@ -541,13 +543,13 @@ public class PrivacyIDEAAuthenticator implements org.keycloak.authentication.Aut
                 }
             }
         }
-        // Passkey login requested: Get a challenge and return
+        // Passkey login requested: Get a usernameless WebAuthn challenge from eduMFA and return
         if (piFormResult.passkeyLoginRequested)
         {
-            PIResponse passkeyResponse = privacyIDEA.validateInitialize("passkey");
-            if (passkeyResponse != null && StringUtil.isNotBlank(passkeyResponse.passkeyChallenge))
+            PIResponse passkeyResponse = privacyIDEA.triggerUsernamelessWebAuthn(config.realm());
+            if (passkeyResponse != null && StringUtil.isNotBlank(passkeyResponse.webAuthnSignRequest))
             {
-                piForm.setPasskeyChallenge(passkeyResponse.passkeyChallenge);
+                piForm.setWebAuthnSignRequest(passkeyResponse.webAuthnSignRequest);
                 piForm.setMode(Mode.PASSKEY);
                 kcForm.setAttribute(AUTH_FORM, piForm);
                 authenticationSession.setAuthNote(NOTE_PASSKEY_TRANSACTION_ID, passkeyResponse.transactionID);
@@ -562,30 +564,9 @@ public class PrivacyIDEAAuthenticator implements org.keycloak.authentication.Aut
             piForm.setPasskeyChallenge("");
             authenticationSession.removeAuthNote(NOTE_PASSKEY_TRANSACTION_ID);
         }
-        // Passkey registration: enroll_via_multichallenge, this is after successful authentication
-        if (StringUtil.isNotBlank(piFormResult.passkeyRegistrationResponse))
-        {
-            String serial = authenticationSession.getAuthNote(NOTE_PASSKEY_REGISTRATION_SERIAL);
-            String transactionId = authenticationSession.getAuthNote(NOTE_PASSKEY_TRANSACTION_ID);
-
-            PIResponse passkeyResponse = privacyIDEA.validateCheckCompletePasskeyRegistration(transactionId, serial,
-                    context.getUser().getUsername(),
-                    piFormResult.passkeyRegistrationResponse,
-                    piFormResult.origin, headers);
-            if (passkeyResponse != null && passkeyResponse.value)
-            {
-                context.success();
-                return;
-            }
-            else if (passkeyResponse != null && passkeyResponse.error != null)
-            {
-                kcForm.setError(passkeyResponse.error.message);
-                kcForm.setAttribute(AUTH_FORM, piForm);
-                Response responseForm = kcForm.createForm(FORM_FILE_NAME);
-                context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, responseForm);
-                return;
-            }
-        }
+        // NOTE: The privacyIDEA passkey registration path (enroll_via_multichallenge) has no eduMFA analog and was
+        // removed. Passkey/resident-credential enrollment is done via eduMFAs own WebAuthn enrollment
+        // (webauthn_resident_key=required), not through this plugin.
 
         // Cancel enrollment via multichallenge
         if (piFormResult.enrollmentViaMultichallengeCancelled)
